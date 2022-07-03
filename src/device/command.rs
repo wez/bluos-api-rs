@@ -35,14 +35,12 @@ impl Command {
             "http://{}:{}/{}",
             self.hostname, self.port, self.command_name
         );
-        let mut query = String::new();
-        if self.params.len() > 0 {
-            query.push('?');
-            for (key, value) in self.params.iter() {
-                query.push_str(format!("{}={}&", key, value).as_str());
-            }
+        if self.params.is_empty() {
+            base
+        } else {
+            let url = reqwest::Url::parse_with_params(&base, self.params.iter()).unwrap();
+            url.as_str().to_string()
         }
-        format!("{}{}", base, query)
     }
 }
 

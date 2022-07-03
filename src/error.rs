@@ -8,11 +8,18 @@ pub enum Error {
     #[error("Could not find BluOS controller")]
     NoBluOSError,
 
-    #[error(transparent)]
-    RequestError(#[from] reqwest::Error),
+    #[error("Error performing GET request to {}: {:#}", .url, .source)]
+    RequestError { source: reqwest::Error, url: String },
 
-    #[error(transparent)]
-    XMLError(#[from] serde_xml_rs::Error),
+    #[error("Error fetching data from {}: {:#}", .url, .source)]
+    RequestFetchError { source: reqwest::Error, url: String },
+
+    #[error("Error parsing XML {} from {}: {:#}", .xml, .url, .source)]
+    XMLError {
+        source: serde_xml_rs::Error,
+        xml: String,
+        url: String,
+    },
 
     #[error(transparent)]
     CancelError(#[from] std::sync::mpsc::SendError<bool>),

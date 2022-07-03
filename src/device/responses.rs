@@ -235,33 +235,161 @@ pub struct PlaylistEntry {
     pub quality: Option<Quality>,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Browse {
     pub sid: String,
-    #[serde(rename = "type")]
-    pub browse_type: String,
+    #[serde(rename = "type", default)]
+    pub browse_type: BrowseType,
 
-    #[serde(rename = "$value")]
+    /// The URI for an icon for the service currently being browsed.
+    pub service_icon: Option<String>,
+    /// The name of the service currently being browsed, for user display.
+    pub service_name: Option<String>,
+    /// A value to use for a key parameter to a /Browse request to search the current service (or
+    /// some deeper part of the hierarchy). Additionally, the request shall have a q parameter
+    /// containing the search term.
+    pub search_key: Option<String>,
+    /// A value to use for a key parameter to a /Browse request to get the next page of items for
+    /// the current view. The paging chunk size is not under the control of the API user and no
+    /// attempt should be made to parse or manipulate the query parameters of this value.
+    pub next_key: Option<String>,
+    /// A value to use for a key parameter to a /Browse request to navigate back up the hierarchy
+    /// if the default back navigation should be overridden.
+    pub parent_key: Option<String>,
+
+    #[serde(rename = "$value", default)]
     pub items: Vec<BrowseItem>,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone, Copy)]
+#[serde(rename_all = "camelCase")]
+pub enum BrowseType {
+    /// A navigation node that could potentially contain a mix of any types of item. Most commonly
+    /// will only contain link or audio items.
+    Menu,
+    /// A list of items of the specified type.
+    ContextMenu,
+    /// A list of items of the specified type.
+    Artists,
+    /// A list of items of the specified type.
+    Composers,
+    /// A list of items of the specified type.
+    Albums,
+    /// A list of items of the specified type.
+    Playlists,
+    /// A list of items of the specified type.
+    Tracks,
+    /// A list of items of the specified type.
+    Genres,
+    /// Alphabetic sections.
+    Sections,
+    /// Generic result list. Most commonly a mix of menu nodes (type=”link”) and radio items
+    /// (type=”audio”).
+    Items,
+    /// May contain subfolders, tracks, and playlists entries.
+    Folders,
+    None,
+}
+
+impl Default for BrowseType {
+    fn default() -> Self {
+        Self::None
+    }
+}
+
+// The docs don't match reality.
+// Most of the results approximately conform to this struct,
+// but some have a number of undocumented fields.
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct BrowseItem {
+    /// An icon or artwork for the item
+    pub image: Option<String>,
+    /// A value to use for a key parameter to a subsequent /Browse request to descend the hierarchy.
+    pub browse_key: Option<String>,
+    /// Main or first line of item description
+    pub text: Option<String>,
+    /// Second line
+    pub text2: Option<String>,
+    #[serde(rename = "type", default)]
+    pub item_type: ItemType,
+    #[serde(rename = "playURL")]
+    /// A URI that may be invoked directly to invoke the default play action for the item in
+    /// question. Usually this is to add the item to the end of the play queue and start playing
+    /// it.
+    pub play_url: Option<String>,
+    #[serde(rename = "autoplayURL")]
+    /// A URI that may be invoked directly to add a track to the queue and play it and add
+    /// subsequent tracks from the containing object (such as an album) to the auto-fill section of
+    /// the play queue
+    pub autoplay_url: Option<String>,
+    /// A value to use for a key parameter to a /Browse request to obtain a result which is
+    /// context-menu of actions related to the item.
+    pub context_menu_key: Option<String>,
+    #[serde(rename = "actionURL")]
+    /// A URI that may be invoked directly to perform the specified action.
+    pub action_url: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone, Copy)]
+#[serde(rename_all = "camelCase")]
+pub enum ItemType {
+    /// A generic node in the browse hierarchy that leads to further nodes
+    Link,
+    /// A node that can be played directly
+    Audio,
+    /// An item representing an artist
+    Artist,
+    /// An item representing a composer
+    Composer,
+    /// An item representing an album or similar collection
+    Album,
+    /// An item representing a playlist or similar collection
+    Playlist,
+    /// An item representing a single track
+    Track,
+    /// A plain text node.
+    Text,
+    /// An alphabetic section.
+    Section,
+    /// A folder in a folder browse
+    Folder,
+    Genre,
+    None,
+}
+
+impl Default for ItemType {
+    fn default() -> Self {
+        Self::None
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct BrowseItem {
-    pub image: Option<String>,
-    pub service_icon: Option<String>,
-    pub service_name: Option<String>,
-    pub search_key: Option<String>,
-    pub next_key: Option<String>,
-    pub parent_key: Option<String>,
-    pub browse_key: Option<String>,
-    pub text: Option<String>,
-    pub text2: Option<String>,
-    #[serde(rename = "type")]
-    pub item_type: Option<String>,
-    pub play_url: Option<String>,
-    pub autoplay_url: Option<String>,
-    pub context_menu_key: Option<String>,
-    pub action_url: Option<String>,
+pub struct SyncStatus {
+    /// Player unique id for network interface.
+    /// May be a MAC address.
+    pub mac: String,
+    /// Player IP and port
+    pub id: String,
+
+    /// Player brand name
+    pub brand: String,
+    /// Volume level in dB
+    pub db: f64,
+    /// Volume level on a 0..100 scale, -1 means fixed volume
+    pub volume: i16,
+
+    /// The group name
+    pub group: Option<String>,
+    /// URL that contains the player icon image
+    pub icon: String,
+    /// Player model id
+    pub model: String,
+    /// Player model name
+    pub model_name: String,
+    /// Player name
+    pub name: String,
+    pub schema_version: String,
 }

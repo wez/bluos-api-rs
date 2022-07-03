@@ -5,7 +5,10 @@ use crate::error::Error;
 use command::Command;
 use reqwest::Response;
 use responses::StateResponse;
-pub use responses::{Browse, IdResponse, Playlist, PlaylistEntry, State, Status};
+pub use responses::{
+    Browse, BrowseItem, BrowseType, IdResponse, ItemType, Playlist, PlaylistEntry, State, Status,
+    SyncStatus,
+};
 use serde::Deserialize;
 use std::net::{Ipv4Addr, SocketAddr};
 
@@ -63,14 +66,39 @@ impl BluOS {
 
     /// Send your own command to the BluOS Device
     async fn command(&self, cmd: Command) -> Result<Response, Error> {
-        Ok(self.client.get(cmd.build()).send().await?)
+        let url = cmd.build();
+        self.client
+            .get(&url)
+            .send()
+            .await
+            .map_err(|source| Error::RequestError { source, url })
     }
 
     /// Send your own command to the BluOS device and expect a response
     /// The function is generic and uses the type to determine what struct to deserialize to
     async fn command_response<'a, T: Deserialize<'a>>(&self, cmd: Command) -> Result<T, Error> {
-        let t = self.client.get(cmd.build()).send().await?.text().await?;
-        Ok(serde_xml_rs::from_str(&t)?)
+        let url = cmd.build();
+        let response =
+            self.client
+                .get(&url)
+                .send()
+                .await
+                .map_err(|source| Error::RequestError {
+                    source,
+                    url: url.to_string(),
+                })?;
+        let text = response
+            .text()
+            .await
+            .map_err(|source| Error::RequestFetchError {
+                source,
+                url: url.to_string(),
+            })?;
+        serde_xml_rs::from_str(&text).map_err(|source| Error::XMLError {
+            source,
+            xml: text,
+            url: url.to_string(),
+        })
     }
 
     /// Get the current status of the BluOS device
@@ -80,9 +108,23 @@ impl BluOS {
         Ok(status)
     }
 
+    /// Get the sync status of the device
+    pub async fn sync_status(&self) -> Result<SyncStatus, Error> {
+        let status: SyncStatus = self.command_response(self.cmd("SyncStatus")).await?;
+        Ok(status)
+    }
+
     pub async fn browse(&self, key: Option<&str>) -> Result<Browse, Error> {
         let mut cmd = self.cmd("Browse");
         cmd.add_optional("key", key);
+        let browse: Browse = self.command_response(cmd).await?;
+        Ok(browse)
+    }
+
+    pub async fn search(&self, key: &str, query: &str) -> Result<Browse, Error> {
+        let mut cmd = self.cmd("Browse");
+        cmd.add_param("key", key);
+        cmd.add_param("q", query);
         let browse: Browse = self.command_response(cmd).await?;
         Ok(browse)
     }
