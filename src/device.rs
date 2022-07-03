@@ -67,6 +67,7 @@ impl BluOS {
     /// Send your own command to the BluOS Device
     async fn command(&self, cmd: Command) -> Result<Response, Error> {
         let url = cmd.build();
+        log::trace!("Requesting {url}");
         self.client
             .get(&url)
             .send()
@@ -78,6 +79,7 @@ impl BluOS {
     /// The function is generic and uses the type to determine what struct to deserialize to
     async fn command_response<'a, T: Deserialize<'a>>(&self, cmd: Command) -> Result<T, Error> {
         let url = cmd.build();
+        log::trace!("Requesting {url}");
         let response =
             self.client
                 .get(&url)
